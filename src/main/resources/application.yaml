@@ -1,3 +1,33 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: technova_be
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/technova
+    username: postgres
+    password: 123456
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+app:
+  security:
+    jwt:
+      secret: "change-this-secret-key-change-this-secret-key"
+      expirationMinutes: 60
+      oauth:
+        google:
+          clientId: "change-google-client-id"
+          clientSecret: "change-google-client-secret"
+          redirectUri: "http://localhost:8080/api/auth/callback"
+          authUrl: "https://accounts.google.com/o/oauth2/v2/auth"
+          tokenUrl: "https://oauth2.googleapis.com/token"
+          userInfoUrl: "https://openidconnect.googleapis.com/v1/userinfo"
+          scopes: "openid email profile"
+      storage:
+        avatarDir: "uploads/avatars"
+        avatarUrlPrefix: "/uploads/avatars"
