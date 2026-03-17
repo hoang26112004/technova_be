@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import com.example.technova_be.comom.exception.BadRequestException;
@@ -38,6 +39,9 @@ public class UserService {
     @Value("${app.storage.avatarUrlPrefix}")
     private String avatarUrlPrefix;
 
+    @Value("${app.storage.avatarMaxBytes:5242880}")
+    private long avatarMaxBytes;
+
     public UserService(
             UserRepository userRepository,
             RoleRepository roleRepository,
@@ -52,7 +56,7 @@ public class UserService {
         this.addressService = addressService;
     }
 
-    public User createAdmin(String email, String password, String fullName) {
+    public AdminUserResponse createAdmin(String email, String password, String fullName) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already exists");
         }
@@ -64,7 +68,7 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setFullName(fullName);
         user.setRoles(Set.of(adminRole));
-        return userRepository.save(user);
+        return toAdminResponse(userRepository.save(user));
     }
 
     public UserResponse createUser(String email, UserRequest request) {
@@ -138,6 +142,7 @@ public class UserService {
         if (avatar == null || avatar.isEmpty()) {
             throw new BadRequestException("Avatar file is required");
         }
+        validateAvatar(avatar);
         User user = requireUser(email);
 
         String fileName = buildAvatarFileName(avatar.getOriginalFilename());
@@ -216,9 +221,22 @@ public class UserService {
         String extension = "";
         int dot = safeName.lastIndexOf('.');
         if (dot > -1 && dot < safeName.length() - 1) {
-            extension = safeName.substring(dot).toLowerCase();
+            extension = safeName.substring(dot).toLowerCase(Locale.ROOT);
         }
         return UUID.randomUUID() + extension;
+    }
+
+    private void validateAvatar(MultipartFile avatar) {
+        if (avatar.getSize() > avatarMaxBytes) {
+            throw new BadRequestException("Avatar file is too large");
+        }
+        String contentType = avatar.getContentType();
+        if (contentType == null || !(contentType.equals("image/png")
+                || contentType.equals("image/jpeg")
+                || contentType.equals("image/webp")
+                || contentType.equals("image/gif"))) {
+            throw new BadRequestException("Avatar file type is not supported");
+        }
     }
 
     private AdminUserResponse toAdminResponse(User user) {

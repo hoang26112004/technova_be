@@ -24,9 +24,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 public class AuthService {
@@ -36,6 +40,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RestTemplate restTemplate;
+    private final ConcurrentMap<String, Instant> oauthStateStore = new ConcurrentHashMap<>();
+    private final Duration oauthStateTtl = Duration.ofMinutes(10);
 
     @Value("${app.oauth.google.clientId}")
     private String googleClientId;
@@ -111,16 +117,19 @@ public class AuthService {
     public String getGoogleLoginUrl() {
         String encodedRedirect = URLEncoder.encode(googleRedirectUri, StandardCharsets.UTF_8);
         String encodedScope = URLEncoder.encode(googleScopes, StandardCharsets.UTF_8);
+        String state = generateOauthState();
         return googleAuthUrl
             + "?client_id=" + googleClientId
             + "&redirect_uri=" + encodedRedirect
             + "&response_type=code"
             + "&scope=" + encodedScope
+            + "&state=" + state
             + "&access_type=offline"
             + "&prompt=consent";
     }
 
-    public AuthResponse handleGoogleCallback(String code) {
+    public AuthResponse handleGoogleCallback(String code, String state) {
+        validateOauthState(state);
         String accessToken = exchangeCodeForAccessToken(code);
         Map<String, Object> userInfo = fetchGoogleUserInfo(accessToken);
 
@@ -197,5 +206,21 @@ public class AuthService {
         Role role = new Role();
         role.setName(name);
         return role;
+    }
+
+    private String generateOauthState() {
+        String state = UUID.randomUUID().toString();
+        oauthStateStore.put(state, Instant.now().plus(oauthStateTtl));
+        return state;
+    }
+
+    private void validateOauthState(String state) {
+        if (state == null || state.isBlank()) {
+            throw new BadRequestException("Missing OAuth state");
+        }
+        Instant expiresAt = oauthStateStore.remove(state);
+        if (expiresAt == null || Instant.now().isAfter(expiresAt)) {
+            throw new BadRequestException("Invalid OAuth state");
+        }
     }
 }

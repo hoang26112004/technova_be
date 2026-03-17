@@ -34,7 +34,10 @@ public class AuthController {
     }
 
     @GetMapping("/callback")
-    public ResponseEntity<ApiResponse<AuthResponse>> googleCallback(@RequestParam("code") String code) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.handleGoogleCallback(code)));
+    public ResponseEntity<ApiResponse<AuthResponse>> googleCallback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.handleGoogleCallback(code, state)));
     }
 }

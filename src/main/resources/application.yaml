@@ -19,15 +19,20 @@ app:
     jwt:
       secret: "change-this-secret-key-change-this-secret-key"
       expirationMinutes: 60
-      oauth:
-        google:
-          clientId: "change-google-client-id"
-          clientSecret: "change-google-client-secret"
-          redirectUri: "http://localhost:8080/api/auth/callback"
-          authUrl: "https://accounts.google.com/o/oauth2/v2/auth"
-          tokenUrl: "https://oauth2.googleapis.com/token"
-          userInfoUrl: "https://openidconnect.googleapis.com/v1/userinfo"
-          scopes: "openid email profile"
-      storage:
-        avatarDir: "uploads/avatars"
-        avatarUrlPrefix: "/uploads/avatars"
+  oauth:
+    google:
+      clientId: "change-google-client-id"
+      clientSecret: "change-google-client-secret"
+      redirectUri: "http://localhost:8080/api/auth/callback"
+      authUrl: "https://accounts.google.com/o/oauth2/v2/auth"
+      tokenUrl: "https://oauth2.googleapis.com/token"
+      userInfoUrl: "https://openidconnect.googleapis.com/v1/userinfo"
+      scopes: "openid email profile"
+  storage:
+    avatarDir: "uploads/avatars"
+    avatarUrlPrefix: "/uploads/avatars"
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger
