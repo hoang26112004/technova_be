@@ -2,6 +2,7 @@ package com.example.technova_be.modules.product.service.impl;
 
 import com.example.technova_be.comom.exception.NotFoundException;
 import com.example.technova_be.comom.response.GlobalResponse;
+import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.modules.product.dto.ProductRequest;
 import com.example.technova_be.modules.product.dto.ProductResponse;
 import com.example.technova_be.modules.product.dto.UpdateProductRequest;
@@ -16,6 +17,10 @@ import com.example.technova_be.modules.product.util.FileUtil;
 import com.example.technova_be.modules.product.util.ProductMapperUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -78,6 +83,69 @@ public class ProductServiceImpl implements ProductService {
         return GlobalResponse.ok(productMapperUtil.toProductResponse(product));
 
     }
+    @Override
+    public GlobalResponse<ProductResponse> getProductById(UUID productId){
+        Product product=requireProduct(productId);
+        return GlobalResponse.ok(productMapperUtil.toProductResponse(product));
+    }
+    @Override
+    public GlobalResponse<PageResponse<ProductResponse>> findAllProducts(String sortedBy, String sortDirection, int page, int size, String searchKeyword, String category, Double minPrice, Double maxPrice, boolean status){
+        Sort sort = Sort.by(sortDirection.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC,
+                sortedBy == null ? "createdDate" : sortedBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Product> pageData = productRepository.findAllWithFilters(searchKeyword, category, minPrice, maxPrice, status, pageable);
+        List<ProductResponse> content = pageData.getContent().stream()
+                .map(productMapperUtil::toProductResponse)
+                .toList();
+
+        PageResponse<ProductResponse> pageResponse = new PageResponse<>(
+                content,
+                pageData.getTotalPages(),
+                pageData.getTotalElements(),
+                pageData.getNumber(),
+                pageData.getSize(),
+                pageData.getNumberOfElements(),
+                pageData.isFirst(),
+                pageData.isLast(),
+                pageData.hasNext(),
+                pageData.hasPrevious()
+        );
+        return GlobalResponse.ok(pageResponse);
+
+    }
+    @Override
+    @Transactional
+    public GlobalResponse<ProductResponse> uploadImage(UUID productId, List<MultipartFile> images){
+        Product product=requireProduct(productId);
+        for (MultipartFile file : images) {
+            String url = fileUtil.saveImage(file);
+            ProductImage image = ProductImage.builder()
+                    .imageUrl(url)
+                    .product(product)
+                    .build();
+            productImageRepository.save(image);
+            product.getImages().add(image);
+        }
+        return GlobalResponse.ok(productMapperUtil.toProductResponse(product));
+    }
+    @Override
+    public GlobalResponse<List<ProductResponse>> searchByKeyword(String keyword){
+        List<ProductResponse> data = productRepository.findByNameContainingIgnoreCase(keyword)
+                .stream()
+                .map(productMapperUtil::toProductResponse)
+                .toList();
+        return GlobalResponse.ok(data);
+    }
+    @Override
+    @Transactional
+    public GlobalResponse<ProductResponse> changeStatusForProduct(UUID productId){
+        Product product=requireProduct(productId);
+        product.setIsActive(!product.getIsActive());
+        productRepository.save(product);
+        return GlobalResponse.ok(productMapperUtil.toProductResponse(product));
+    }
+
 
     private Category requireCategory(UUID id) {
         return categoryRepository.findById(id)
