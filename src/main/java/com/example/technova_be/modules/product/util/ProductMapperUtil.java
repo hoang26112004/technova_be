@@ -63,4 +63,13 @@ public class ProductMapperUtil {
         if (variants == null || variants.isEmpty()) return null;
         return variants.stream().map(ProductVariant::getStock).reduce(0, Integer::sum);
     }
+    public ProductAttributeResponse toAttributeResponse(ProductAttribute entity) {
+        if (entity == null) return null;
+
+        return ProductAttributeResponse.builder()
+                .id(entity.getId())
+                .type(entity.getType() != null ? entity.getType().name() : null)
+                .value(entity.getValue())
+                .build();
+    }
 }
