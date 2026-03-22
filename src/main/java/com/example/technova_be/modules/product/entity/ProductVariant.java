@@ -1,4 +1,4 @@
-package com.example.technova_be.modules.product;
+package com.example.technova_be.modules.product.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

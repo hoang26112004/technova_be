@@ -1,6 +1,8 @@
 package com.example.technova_be.modules.user.controller;
 
 import com.example.technova_be.comom.constants.UserStatus;
+import com.example.technova_be.comom.response.GlobalResponse;
+import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.modules.user.dto.AdminResetPasswordRequest;
 import com.example.technova_be.modules.user.dto.AdminUserResponse;
 import com.example.technova_be.modules.user.dto.UpdateUserStatusRequest;
@@ -30,44 +32,45 @@ public class UserAdminController {
 
     @PostMapping("/create-admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AdminUserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
-        return ResponseEntity.ok(
+    public ResponseEntity<GlobalResponse<AdminUserResponse>> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
+        return ResponseEntity.ok(GlobalResponse.ok(
             userService.createAdmin(request.getEmail(), request.getPassword(), request.getFullName())
-        );
+        ));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<AdminUserResponse>> listUsers(
+    public ResponseEntity<GlobalResponse<PageResponse<AdminUserResponse>>> listUsers(
         @RequestParam(name = "query", required = false) String query,
         @RequestParam(name = "status", required = false) UserStatus status,
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(userService.getAllUsers(query, status, pageable));
+        Page<AdminUserResponse> page = userService.getAllUsers(query, status, pageable);
+        return ResponseEntity.ok(GlobalResponse.ok(toPageResponse(page)));
     }
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AdminUserResponse> getUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(userService.getUserById(userId));
+    public ResponseEntity<GlobalResponse<AdminUserResponse>> getUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(GlobalResponse.ok(userService.getUserById(userId)));
     }
 
     @PatchMapping("/{userId}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AdminUserResponse> updateStatus(
+    public ResponseEntity<GlobalResponse<AdminUserResponse>> updateStatus(
         @PathVariable Long userId,
         @Valid @RequestBody UpdateUserStatusRequest request
     ) {
-        return ResponseEntity.ok(userService.updateUserStatus(userId, request));
+        return ResponseEntity.ok(GlobalResponse.ok(userService.updateUserStatus(userId, request)));
     }
 
     @PostMapping("/{userId}/reset-password")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AdminUserResponse> resetPassword(
+    public ResponseEntity<GlobalResponse<AdminUserResponse>> resetPassword(
         @PathVariable Long userId,
         @Valid @RequestBody AdminResetPasswordRequest request
     ) {
-        return ResponseEntity.ok(userService.resetPassword(userId, request));
+        return ResponseEntity.ok(GlobalResponse.ok(userService.resetPassword(userId, request)));
     }
 
     @Getter
@@ -80,5 +83,20 @@ public class UserAdminController {
         private String password;
         @NotBlank
         private String fullName;
+    }
+
+    private PageResponse<AdminUserResponse> toPageResponse(Page<AdminUserResponse> page) {
+        return new PageResponse<>(
+                page.getContent(),           // 1. content (List)
+                page.getTotalPages(),        // 2. totalPages (int)
+                page.getTotalElements(),     // 3. totalElements (long) - Chỗ này bạn đang truyền nhầm Number
+                page.getNumber(),            // 4. page (int)
+                page.getSize(),              // 5. size (int)
+                page.getNumberOfElements(),  // 6. numberOfElements (int) - Bạn đang thiếu cái này
+                page.isFirst(),              // 7. isFirst (boolean)
+                page.isLast(),               // 8. isLast (boolean)
+                page.hasNext(),              // 9. hasNext (boolean)
+                page.hasPrevious()
+        );
     }
 }
