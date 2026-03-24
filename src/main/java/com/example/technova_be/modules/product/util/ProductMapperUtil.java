@@ -50,6 +50,9 @@ public class ProductMapperUtil {
     }
 
     private List<ProductAttributeResponse> toAttributeResponses(List<ProductAttribute> attrs) {
+        if (attrs == null || attrs.isEmpty()) {
+            return List.of();
+        }
         return attrs.stream()
                 .map(a -> ProductAttributeResponse.builder()
                         .id(a.getId())

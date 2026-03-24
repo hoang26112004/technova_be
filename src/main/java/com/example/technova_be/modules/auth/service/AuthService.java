@@ -41,9 +41,12 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RestTemplate restTemplate;
+    private final Long expirationMinutes;
+
     private final ConcurrentMap<String, Instant> oauthStateStore = new ConcurrentHashMap<>();
     private final Duration oauthStateTtl = Duration.ofMinutes(10);
 
+    // --- PHẢI CÓ CÁC DÒNG NÀY THÌ MỚI HẾT LỖI Ở DƯỚI ---
     @Value("${app.oauth.google.clientId}")
     private String googleClientId;
 
@@ -66,12 +69,13 @@ public class AuthService {
     private String googleScopes;
 
     public AuthService(
-        UserRepository userRepository,
-        RoleRepository roleRepository,
-        PasswordEncoder passwordEncoder,
-        JwtService jwtService,
-        AuthenticationManager authenticationManager,
-        RestTemplate restTemplate
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            RestTemplate restTemplate,
+            @Value("${app.security.jwt.expirationMinutes}") Long expirationMinutes
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -79,6 +83,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.restTemplate = restTemplate;
+        this.expirationMinutes = expirationMinutes;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -93,7 +98,7 @@ public class AuthService {
         }
 
         Role userRole = roleRepository.findByName("USER")
-            .orElseGet(() -> roleRepository.save(createRole("USER")));
+                .orElseGet(() -> roleRepository.save(createRole("USER")));
 
         User user = new User();
         user.setEmail(request.getEmail());
@@ -103,19 +108,25 @@ public class AuthService {
         user.setRoles(Set.of(userRole));
 
         userRepository.save(user);
-        String token = jwtService.generateToken(user.getEmail());
+
+        String token = jwtService.generateToken(
+                user.getId().toString(),
+                Map.of("email", user.getEmail())
+        );
         return new AuthResponse(token);
     }
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
-            .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+
         if (user.getStatus() == UserStatus.LOCKED) {
             throw new IllegalArgumentException("Account is locked");
         }
+
         try {
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
         } catch (AuthenticationException ex) {
             if (ex instanceof DisabledException) {
@@ -123,22 +134,12 @@ public class AuthService {
             }
             throw new IllegalArgumentException("Invalid credentials");
         }
-        String token = jwtService.generateToken(user.getEmail());
-        return new AuthResponse(token);
-    }
 
-    public String getGoogleLoginUrl() {
-        String encodedRedirect = URLEncoder.encode(googleRedirectUri, StandardCharsets.UTF_8);
-        String encodedScope = URLEncoder.encode(googleScopes, StandardCharsets.UTF_8);
-        String state = generateOauthState();
-        return googleAuthUrl
-            + "?client_id=" + googleClientId
-            + "&redirect_uri=" + encodedRedirect
-            + "&response_type=code"
-            + "&scope=" + encodedScope
-            + "&state=" + state
-            + "&access_type=offline"
-            + "&prompt=consent";
+        String token = jwtService.generateToken(
+                user.getId().toString(),
+                Map.of("email", user.getEmail())
+        );
+        return new AuthResponse(token);
     }
 
     public AuthResponse handleGoogleCallback(String code, String state) {
@@ -155,27 +156,29 @@ public class AuthService {
         String picture = (String) userInfo.get("picture");
 
         User user = userRepository.findByEmail(email).orElseGet(() -> createGoogleUser(email, name, picture));
+
         if (user.getStatus() == UserStatus.LOCKED) {
             throw new BadRequestException("Account is locked");
         }
         ensureUserRole(user);
         userRepository.save(user);
 
-        String token = jwtService.generateToken(email);
+        String token = jwtService.generateToken(
+                user.getId().toString(),
+                Map.of("email", user.getEmail())
+        );
         return new AuthResponse(token);
     }
 
     private String exchangeCodeForAccessToken(String code) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("client_id", googleClientId);
         body.add("client_secret", googleClientSecret);
         body.add("code", code);
         body.add("grant_type", "authorization_code");
         body.add("redirect_uri", googleRedirectUri);
-
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
         ResponseEntity<Map> response = restTemplate.postForEntity(googleTokenUrl, request, Map.class);
         Map<String, Object> payload = response.getBody();
@@ -208,8 +211,7 @@ public class AuthService {
 
     private void ensureUserRole(User user) {
         Role userRole = roleRepository.findByName("USER")
-            .orElseGet(() -> roleRepository.save(createRole("USER")));
-
+                .orElseGet(() -> roleRepository.save(createRole("USER")));
         if (user.getRoles() == null || user.getRoles().isEmpty()) {
             user.setRoles(Set.of(userRole));
         }
@@ -224,16 +226,17 @@ public class AuthService {
     private String buildFullName(String firstName, String lastName) {
         String first = firstName == null ? "" : firstName.trim();
         String last = lastName == null ? "" : lastName.trim();
-        if (first.isEmpty() && last.isEmpty()) {
-            return "";
-        }
-        if (first.isEmpty()) {
-            return last;
-        }
-        if (last.isEmpty()) {
-            return first;
-        }
+        if (first.isEmpty() && last.isEmpty()) return "";
+        if (first.isEmpty()) return last;
+        if (last.isEmpty()) return first;
         return last + " " + first;
+    }
+
+    public String getGoogleLoginUrl() {
+        String encodedRedirect = URLEncoder.encode(googleRedirectUri, StandardCharsets.UTF_8);
+        String encodedScope = URLEncoder.encode(googleScopes, StandardCharsets.UTF_8);
+        String state = generateOauthState();
+        return googleAuthUrl + "?client_id=" + googleClientId + "&redirect_uri=" + encodedRedirect + "&response_type=code" + "&scope=" + encodedScope + "&state=" + state + "&access_type=offline" + "&prompt=consent";
     }
 
     private String generateOauthState() {
@@ -244,23 +247,17 @@ public class AuthService {
     }
 
     private void validateOauthState(String state) {
-        if (state == null || state.isBlank()) {
-            throw new BadRequestException("Missing OAuth state");
-        }
+        if (state == null || state.isBlank()) throw new BadRequestException("Missing OAuth state");
         purgeExpiredOauthStates();
         Instant expiresAt = oauthStateStore.remove(state);
-        if (expiresAt == null || Instant.now().isAfter(expiresAt)) {
-            throw new BadRequestException("Invalid OAuth state");
-        }
+        if (expiresAt == null || Instant.now().isAfter(expiresAt)) throw new BadRequestException("Invalid OAuth state");
     }
 
     private void purgeExpiredOauthStates() {
         Instant now = Instant.now();
         for (Iterator<Map.Entry<String, Instant>> it = oauthStateStore.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, Instant> entry = it.next();
-            if (entry.getValue() == null || now.isAfter(entry.getValue())) {
-                it.remove();
-            }
+            if (entry.getValue() == null || now.isAfter(entry.getValue())) it.remove();
         }
     }
 }

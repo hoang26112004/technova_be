@@ -21,8 +21,8 @@ public class AddressService {
         this.userRepository = userRepository;
     }
 
-    public List<AddressResponse> getOwnAddresses(String email) {
-        User user = userRepository.findByEmail(email)
+    public List<AddressResponse> getOwnAddresses(Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         return addressRepository.findByUser(user).stream()
                 .map(this::toResponse)
@@ -30,8 +30,8 @@ public class AddressService {
     }
 
     @Transactional
-    public AddressResponse createAddress(String email, AddressRequest request) {
-        User user = userRepository.findByEmail(email)
+    public AddressResponse createAddress(Long userId, AddressRequest request) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         Address address = toEntity(request);
         address.setUser(user);
@@ -42,8 +42,8 @@ public class AddressService {
     }
 
     @Transactional
-    public AddressResponse updateAddress(Long addressId, String email, AddressRequest update) {
-        User user = userRepository.findByEmail(email)
+    public AddressResponse updateAddress(Long addressId, Long userId, AddressRequest update) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         Address existing = addressRepository.findByIdAndUser(addressId, user)
                 .orElseThrow(() -> new NotFoundException("Address not found"));
@@ -63,16 +63,16 @@ public class AddressService {
         return toResponse(addressRepository.save(existing));
     }
 
-    public AddressResponse getAddressById(Long addressId, String email) {
-        User user = userRepository.findByEmail(email)
+    public AddressResponse getAddressById(Long addressId, Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         Address address = addressRepository.findByIdAndUser(addressId, user)
                 .orElseThrow(() -> new NotFoundException("Address not found"));
         return toResponse(address);
     }
 
-    public void deleteAddress(Long addressId, String email) {
-        User user = userRepository.findByEmail(email)
+    public void deleteAddress(Long addressId, Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         Address address = addressRepository.findByIdAndUser(addressId, user)
                 .orElseThrow(() -> new NotFoundException("Address not found"));

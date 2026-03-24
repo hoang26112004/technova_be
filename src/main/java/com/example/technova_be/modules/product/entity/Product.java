@@ -46,9 +46,11 @@ public class Product {
     @JoinColumn(name = "category_id")
     Category category;
 
+    @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<ProductVariant> variants = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<ProductImage> images = new ArrayList<>();
 
