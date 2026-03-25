@@ -16,7 +16,7 @@ public class OrderSpecification {
 
     public static Specification<Order> filterOrders(
             OrderStatus status,
-            String userId,
+            Long userId,
             Double minTotal,
             Double maxTotal,
             UUID productId, // Lọc theo sản phẩm
@@ -32,7 +32,7 @@ public class OrderSpecification {
             }
 
             // 2. Lọc theo User ID
-            if (userId != null && !userId.isEmpty()) {
+            if (userId != null) {
                 predicates.add(cb.equal(root.get("userId"), userId));
             }
 
