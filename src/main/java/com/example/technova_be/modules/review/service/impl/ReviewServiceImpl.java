@@ -91,13 +91,18 @@ public class ReviewServiceImpl implements ReviewService {
                         .build())
                 .collect(Collectors.toList());
 
-        return PageResponse.<ReviewResponse>builder()
-                .currentPage(reviewPage.getNumber())
-                .totalPages(reviewPage.getTotalPages())
-                .pageSize(reviewPage.getSize())
-                .totalElements(reviewPage.getTotalElements())
-                .data(responseList)
-                .build();
+        return new PageResponse<>(
+                responseList,
+                reviewPage.getTotalPages(),
+                reviewPage.getTotalElements(),
+                reviewPage.getNumber(),
+                reviewPage.getSize(),
+                reviewPage.getNumberOfElements(),
+                reviewPage.isFirst(),
+                reviewPage.isLast(),
+                reviewPage.hasNext(),
+                reviewPage.hasPrevious()
+        );
     }
 
     @Override
