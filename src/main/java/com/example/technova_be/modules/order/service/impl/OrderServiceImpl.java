@@ -1,5 +1,6 @@
 package com.example.technova_be.modules.order.service.impl;
 
+import com.example.technova_be.comom.constants.NotificationType;
 import com.example.technova_be.comom.constants.OrderStatus;
 import com.example.technova_be.comom.constants.PaymentMethod;
 import com.example.technova_be.comom.exception.BadRequestException;
@@ -26,6 +27,7 @@ import com.example.technova_be.modules.product.service.ProductVariantService;
 import com.example.technova_be.modules.product.util.GeneratorUtil;
 import com.example.technova_be.modules.user.entity.User;
 import com.example.technova_be.modules.user.repository.UserRepository;
+import com.example.technova_be.modules.notification.service.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +59,7 @@ public class OrderServiceImpl implements OrderService {
     ProductRepository productRepository;
     ProductVariantRepository variantRepository;
     UserRepository userRepository;
+    NotificationService notificationService;
 
     @Override
     @Transactional
@@ -112,6 +115,13 @@ public class OrderServiceImpl implements OrderService {
 
         order.setOrderItems(items);
         Order savedOrder = orderRepository.save(order);
+        notificationService.sendNotification(
+                user.getId(),
+                "Order created",
+                "Order " + savedOrder.getReference() + " has been created.",
+                NotificationType.ORDER,
+                savedOrder.getId().toString()
+        );
 
         orderProducer.sendOrderConfirmation(new OrderConfirmation(
                 savedOrder.getReference(),
@@ -146,7 +156,15 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Khong tim thay don hang"));
         order.setStatus(status);
-        return new GlobalResponse<>(Status.SUCCESS, mapToOrderResponse(orderRepository.save(order), null));
+        Order savedOrder = orderRepository.save(order);
+        notificationService.sendNotification(
+                savedOrder.getUserId(),
+                "Order status updated",
+                "Order " + savedOrder.getReference() + " is now " + savedOrder.getStatus() + ".",
+                NotificationType.ORDER,
+                savedOrder.getId().toString()
+        );
+        return new GlobalResponse<>(Status.SUCCESS, mapToOrderResponse(savedOrder, null));
     }
 
     @Override
@@ -229,6 +247,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order savedOrder = orderRepository.save(order);
+        notificationService.sendNotification(
+                userId,
+                "Order created",
+                "Order " + savedOrder.getReference() + " has been created.",
+                NotificationType.ORDER,
+                savedOrder.getId().toString()
+        );
         cartService.clearCart(userId);
         return mapToResponse(savedOrder);
     }
