@@ -1,18 +1,18 @@
 package com.example.technova_be.modules.review.controller;
 
-import com.example.technova_be.comom.exception.NotFoundException;
+import com.example.technova_be.comom.exception.BadRequestException;
 import com.example.technova_be.comom.response.GlobalResponse;
 import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.modules.review.dto.ReviewRequest;
 import com.example.technova_be.modules.review.dto.ReviewResponse;
 import com.example.technova_be.modules.review.service.ReviewService;
-import com.example.technova_be.modules.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,12 +65,12 @@ public class ReviewController {
 
     private Long requireUserId(Authentication auth) {
         if (auth == null || auth.getName() == null) {
-            throw new IllegalArgumentException("Unauthorized");
+            throw new AuthenticationCredentialsNotFoundException("Unauthorized");
         }
         try {
             return Long.parseLong(auth.getName());
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Invalid user id");
+            throw new BadRequestException("Invalid user id");
         }
     }
 }

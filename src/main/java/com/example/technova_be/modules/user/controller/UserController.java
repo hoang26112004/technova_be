@@ -2,12 +2,14 @@ package com.example.technova_be.modules.user.controller;
 
 import com.example.technova_be.comom.response.GlobalResponse;
 import com.example.technova_be.comom.response.MessageResponse;
+import com.example.technova_be.comom.exception.BadRequestException;
 import com.example.technova_be.modules.user.dto.ChangePasswordRequest;
 import com.example.technova_be.modules.user.dto.UserRequest;
 import com.example.technova_be.modules.user.dto.UserResponse;
 import com.example.technova_be.modules.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,12 +71,12 @@ public class UserController {
 
     private Long requireUserId(Authentication auth) {
         if (auth == null || auth.getName() == null) {
-            throw new IllegalArgumentException("Unauthorized");
+            throw new AuthenticationCredentialsNotFoundException("Unauthorized");
         }
         try {
             return Long.parseLong(auth.getName());
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Invalid user id");
+            throw new BadRequestException("Invalid user id");
         }
     }
 }

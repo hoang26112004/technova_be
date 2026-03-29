@@ -3,11 +3,13 @@ package com.example.technova_be.modules.user.controller;
 
 import com.example.technova_be.comom.response.GlobalResponse;
 import com.example.technova_be.comom.response.MessageResponse;
+import com.example.technova_be.comom.exception.BadRequestException;
 import com.example.technova_be.modules.user.dto.AddressRequest;
 import com.example.technova_be.modules.user.dto.AddressResponse;
 import com.example.technova_be.modules.user.service.AddressService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,12 +70,12 @@ public class AddressController {
 
     private Long requireUserId(Authentication auth) {
         if (auth == null || auth.getName() == null) {
-            throw new RuntimeException("Unauthorized");
+            throw new AuthenticationCredentialsNotFoundException("Unauthorized");
         }
         try {
             return Long.parseLong(auth.getName());
         } catch (NumberFormatException ex) {
-            throw new RuntimeException("Invalid user id");
+            throw new BadRequestException("Invalid user id");
         }
     }
 }
