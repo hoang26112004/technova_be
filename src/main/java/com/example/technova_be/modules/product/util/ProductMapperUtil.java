@@ -9,6 +9,7 @@ import com.example.technova_be.modules.product.dto.ProductResponse;
 import com.example.technova_be.modules.product.dto.ProductVariantResponse;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 
 @Component
@@ -62,7 +63,7 @@ public class ProductMapperUtil {
                 .toList();
     }
 
-    private Integer calcStock(List<ProductVariant> variants) {
+    private Integer calcStock(Collection<ProductVariant> variants) {
         if (variants == null || variants.isEmpty()) return null;
         return variants.stream().map(ProductVariant::getStock).reduce(0, Integer::sum);
     }

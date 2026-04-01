@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -15,4 +16,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query("UPDATE ProductVariant pv SET pv.stock = pv.stock - :quantity " +
             "WHERE pv.id = :id AND pv.stock >= :quantity")
     int updateStock(@Param("id") UUID id, @Param("quantity") Integer quantity);
+
+    @Query("select pv.id from ProductVariant pv where pv.product.category.id = :categoryId")
+    List<UUID> findIdsByCategoryId(@Param("categoryId") UUID categoryId);
 }

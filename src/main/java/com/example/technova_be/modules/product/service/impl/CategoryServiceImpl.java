@@ -4,10 +4,12 @@ import com.example.technova_be.comom.exception.NotFoundException;
 import com.example.technova_be.comom.response.GlobalResponse;
 import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.comom.response.Status;
+import com.example.technova_be.modules.cart.repository.CartItemRepository;
 import com.example.technova_be.modules.product.dto.CategoryRequest;
 import com.example.technova_be.modules.product.dto.CategoryResponse;
 import com.example.technova_be.modules.product.entity.Category;
 import com.example.technova_be.modules.product.repository.CategoryRepository;
+import com.example.technova_be.modules.product.repository.ProductVariantRepository;
 import com.example.technova_be.modules.product.service.CategoryService;
 import com.example.technova_be.modules.product.util.FileUtil;
 
@@ -27,6 +29,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
     private final FileUtil fileUtil;
 
     @Override
@@ -53,8 +57,13 @@ public class CategoryServiceImpl implements CategoryService {
         return GlobalResponse.ok(toResponse(categoryRepository.save(category)));
     }
     @Override
+    @Transactional
     public GlobalResponse<String> deleteCategory(UUID categoryId){
         Category category = requireCategory(categoryId);
+        var variantIds = productVariantRepository.findIdsByCategoryId(categoryId);
+        if (!variantIds.isEmpty()) {
+            cartItemRepository.deleteByVariant_IdIn(variantIds);
+        }
         categoryRepository.delete(category);
         return GlobalResponse.ok("Deleted");
     }
