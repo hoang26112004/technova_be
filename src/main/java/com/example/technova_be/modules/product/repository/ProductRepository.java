@@ -1,8 +1,10 @@
 package com.example.technova_be.modules.product.repository;
 
+import com.example.technova_be.modules.product.dto.CategoryCountProjection;
 import com.example.technova_be.modules.product.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +15,17 @@ import java.util.UUID;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID> {
+
+    long countByIsActiveTrue();
+
+    @Query(
+        "SELECT c.name as name, COUNT(p) as count " +
+        "FROM Product p JOIN p.category c " +
+        "WHERE p.isActive = true " +
+        "GROUP BY c.name " +
+        "ORDER BY COUNT(p) DESC"
+    )
+    List<CategoryCountProjection> countActiveProductsByCategory();
 
     @Query("SELECT p FROM Product p JOIN p.category c WHERE " +
             "(COALESCE(:searchKeyword, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) AND " +
@@ -30,4 +43,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     );
 
     List<Product> findByNameContainingIgnoreCase(String keyword);
+
+    @EntityGraph(attributePaths = {"category", "variants", "variants.attributes", "images"})
+    List<Product> findByIsActiveTrue();
+
+    @EntityGraph(attributePaths = {"category", "variants", "variants.attributes", "images"})
+    List<Product> findByIsActiveTrueOrderByCreatedDateDesc(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category", "variants", "variants.attributes", "images"})
+    List<Product> findByIsActiveTrueAndIdIn(List<UUID> ids);
 }

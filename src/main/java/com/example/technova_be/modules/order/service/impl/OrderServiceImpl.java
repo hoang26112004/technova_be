@@ -117,8 +117,8 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         notificationService.sendNotification(
                 user.getId(),
-                "Order created",
-                "Order " + savedOrder.getReference() + " has been created.",
+                "Tạo đơn hàng",
+                "Đơn hàng " + savedOrder.getReference() + " đã được tạo.",
                 NotificationType.ORDER,
                 savedOrder.getId().toString()
         );
@@ -252,8 +252,8 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         notificationService.sendNotification(
                 userId,
-                "Order created",
-                "Order " + savedOrder.getReference() + " has been created.",
+                "Tạo đơn hàng",
+                "Đơn hàng " + savedOrder.getReference() + " đã được tạo.",
                 NotificationType.ORDER,
                 savedOrder.getId().toString()
         );
@@ -278,7 +278,7 @@ public class OrderServiceImpl implements OrderService {
                 order.getPaymentMethod(),
                 order.getTotalAmount(),
                 order.getOrderItems().stream()
-                        .map(i -> new OrderItemResponse(i.getVariantId(), i.getQuantity(), i.getPrice()))
+                        .map(i -> new OrderItemResponse(i.getProductId(), i.getVariantId(), i.getQuantity(), i.getPrice()))
                         .toList(),
                 payment,
                 order.getCreatedDate()

@@ -41,6 +41,21 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public String createPaymentLink(String orderReference, HttpServletRequest request) {
+        // VNPay sandbox will show Error.html?code=72 ("Website not found") when tmnCode is not registered/incorrect.
+        // Fail fast with an actionable message instead of redirecting the user to VNPay error page.
+        if (vnp_TmnCode == null || vnp_TmnCode.isBlank() || "YOUR_TMN_CODE".equalsIgnoreCase(vnp_TmnCode.trim())) {
+            throw new IllegalStateException("VNPay is not configured: set vnpay.tmnCode to your sandbox TMN code");
+        }
+        if (secretKey == null || secretKey.isBlank() || "YOUR_HASH_SECRET".equalsIgnoreCase(secretKey.trim())) {
+            throw new IllegalStateException("VNPay is not configured: set vnpay.hashSecret to your sandbox hash secret");
+        }
+        if (vnp_PayUrl == null || vnp_PayUrl.isBlank()) {
+            throw new IllegalStateException("VNPay is not configured: set vnpay.url (e.g. https://sandbox.vnpayment.vn/paymentv2/vpcpay.html)");
+        }
+        if (vnp_ReturnUrl == null || vnp_ReturnUrl.isBlank()) {
+            throw new IllegalStateException("VNPay is not configured: set vnpay.returnUrl to your backend callback URL");
+        }
+
         Order order = orderRepository.findByReference(orderReference)
                 .orElseThrow(() -> new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng: " + orderReference));
 

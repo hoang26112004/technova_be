@@ -5,17 +5,20 @@ import com.example.technova_be.comom.response.GlobalResponse;
 import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.modules.review.dto.ReviewRequest;
 import com.example.technova_be.modules.review.dto.ReviewResponse;
+import com.example.technova_be.modules.review.dto.TopRatedProductResponse;
 import com.example.technova_be.modules.review.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -53,6 +56,17 @@ public class ReviewController {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, sortField));
         
         PageResponse<ReviewResponse> response = reviewService.getReviewsByProduct(productId, pageRequest);
+        return GlobalResponse.ok(response);
+    }
+
+    @GetMapping("/top-rated")
+    public GlobalResponse<List<TopRatedProductResponse>> getTopRatedProducts(
+            @RequestParam(defaultValue = "1") long minCount,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        int safeSize = Math.max(1, Math.min(size, 50));
+        Pageable pageable = PageRequest.of(0, safeSize);
+        List<TopRatedProductResponse> response = reviewService.getTopRatedProducts(minCount, pageable);
         return GlobalResponse.ok(response);
     }
 

@@ -1,5 +1,6 @@
 package com.example.technova_be.modules.review.repository;
 
+import com.example.technova_be.modules.review.dto.ProductRatingProjection;
 import com.example.technova_be.modules.review.entity.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,17 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     
     // Get the exact review a user made for a product
     Optional<Review> findByUserIdAndProductId(Long userId, UUID productId);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT r.productId as productId, AVG(r.rating) as avgRating, COUNT(r) as reviewCount " +
+        "FROM Review r JOIN Product p ON p.id = r.productId " +
+        "WHERE p.isActive = true " +
+        "GROUP BY r.productId " +
+        "HAVING COUNT(r) >= :minCount " +
+        "ORDER BY AVG(r.rating) DESC, COUNT(r) DESC"
+    )
+    java.util.List<ProductRatingProjection> findTopRatedProducts(
+        @org.springframework.data.repository.query.Param("minCount") long minCount,
+        Pageable pageable
+    );
 }

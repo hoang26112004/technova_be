@@ -6,8 +6,11 @@ import com.example.technova_be.comom.response.PageResponse;
 import com.example.technova_be.modules.order.repository.OrderRepository;
 import com.example.technova_be.modules.product.entity.Product;
 import com.example.technova_be.modules.product.repository.ProductRepository;
+import com.example.technova_be.modules.product.util.ProductMapperUtil;
+import com.example.technova_be.modules.review.dto.ProductRatingProjection;
 import com.example.technova_be.modules.review.dto.ReviewRequest;
 import com.example.technova_be.modules.review.dto.ReviewResponse;
+import com.example.technova_be.modules.review.dto.TopRatedProductResponse;
 import com.example.technova_be.modules.review.entity.Review;
 import com.example.technova_be.modules.review.repository.ReviewRepository;
 import com.example.technova_be.modules.review.service.ReviewService;
@@ -15,13 +18,16 @@ import com.example.technova_be.modules.user.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +39,7 @@ public class ReviewServiceImpl implements ReviewService {
     ProductRepository productRepository;
     OrderRepository orderRepository;
     UserRepository userRepository;
+    ProductMapperUtil productMapperUtil;
 
     @Override
     @Transactional
@@ -103,6 +110,38 @@ public class ReviewServiceImpl implements ReviewService {
                 reviewPage.hasNext(),
                 reviewPage.hasPrevious()
         );
+    }
+
+    @Override
+    public List<TopRatedProductResponse> getTopRatedProducts(long minCount, Pageable pageable) {
+        List<ProductRatingProjection> ratings = reviewRepository.findTopRatedProducts(minCount, pageable);
+        if (ratings == null || ratings.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> ids = ratings.stream()
+                .map(ProductRatingProjection::getProductId)
+                .filter(Objects::nonNull)
+                .toList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, Product> productsById = productRepository.findByIsActiveTrueAndIdIn(ids).stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity(), (a, b) -> a));
+
+        return ratings.stream()
+                .map(r -> {
+                    Product p = productsById.get(r.getProductId());
+                    if (p == null) return null;
+                    return TopRatedProductResponse.builder()
+                            .product(productMapperUtil.toProductResponse(p))
+                            .avgRating(r.getAvgRating() != null ? r.getAvgRating() : 0.0)
+                            .reviewCount(r.getReviewCount() != null ? r.getReviewCount() : 0L)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override
