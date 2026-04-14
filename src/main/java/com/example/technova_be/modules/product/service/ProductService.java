@@ -13,7 +13,18 @@ import java.util.UUID;
 public interface ProductService {
     GlobalResponse<ProductResponse> createProduct(ProductRequest request);
 //
-    GlobalResponse<PageResponse<ProductResponse>> findAllProducts(String sortedBy, String sortDirection, int page, int size, String searchKeyword, String category, Double minPrice, Double maxPrice, boolean status);
+    GlobalResponse<PageResponse<ProductResponse>> findAllProducts(
+            String sortedBy,
+            String sortDirection,
+            int page,
+            int size,
+            String searchKeyword,
+            String category,
+            UUID categoryId,
+            Double minPrice,
+            Double maxPrice,
+            boolean status
+    );
 //
     GlobalResponse<ProductResponse> getProductById(UUID productId);
 //

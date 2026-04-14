@@ -19,16 +19,17 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     long countByIsActiveTrue();
 
     @Query(
-        "SELECT c.name as name, COUNT(p) as count " +
-        "FROM Product p JOIN p.category c " +
-        "WHERE p.isActive = true " +
-        "GROUP BY c.name " +
-        "ORDER BY COUNT(p) DESC"
+            "SELECT c.name as name, COUNT(p) as count " +
+                    "FROM Product p JOIN p.category c " +
+                    "WHERE p.isActive = true " +
+                    "GROUP BY c.name " +
+                    "ORDER BY COUNT(p) DESC"
     )
     List<CategoryCountProjection> countActiveProductsByCategory();
 
     @Query("SELECT p FROM Product p JOIN p.category c WHERE " +
             "(COALESCE(:searchKeyword, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchKeyword, '%'))) AND " +
+            "(:categoryId IS NULL OR c.id = :categoryId) AND " +
             "(COALESCE(:category, '') = '' OR LOWER(CAST(c.name AS string)) = LOWER(:category)) AND " +
             "(COALESCE(:minPrice, 0) = 0 OR p.price >= :minPrice) AND " +
             "(COALESCE(:maxPrice, 0) = 0 OR p.price <= :maxPrice) AND " +
@@ -36,6 +37,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Page<Product> findAllWithFilters(
             @Param("searchKeyword") String keyword,
             @Param("category") String category,
+            @Param("categoryId") UUID categoryId,
             @Param("minPrice") Double minPrice,
             @Param("maxPrice") Double maxPrice,
             @Param("status") Boolean status,

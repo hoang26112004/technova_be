@@ -89,12 +89,31 @@ public class ProductServiceImpl implements ProductService {
         return GlobalResponse.ok(productMapperUtil.toProductResponse(product));
     }
     @Override
-    public GlobalResponse<PageResponse<ProductResponse>> findAllProducts(String sortedBy, String sortDirection, int page, int size, String searchKeyword, String category, Double minPrice, Double maxPrice, boolean status){
+    public GlobalResponse<PageResponse<ProductResponse>> findAllProducts(
+            String sortedBy,
+            String sortDirection,
+            int page,
+            int size,
+            String searchKeyword,
+            String category,
+            UUID categoryId,
+            Double minPrice,
+            Double maxPrice,
+            boolean status
+    ){
         Sort sort = Sort.by(sortDirection.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC,
                 sortedBy == null ? "createdDate" : sortedBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Product> pageData = productRepository.findAllWithFilters(searchKeyword, category, minPrice, maxPrice, status, pageable);
+        Page<Product> pageData = productRepository.findAllWithFilters(
+                searchKeyword,
+                category,
+                categoryId,
+                minPrice,
+                maxPrice,
+                status,
+                pageable
+        );
         List<ProductResponse> content = pageData.getContent().stream()
                 .map(productMapperUtil::toProductResponse)
                 .toList();
