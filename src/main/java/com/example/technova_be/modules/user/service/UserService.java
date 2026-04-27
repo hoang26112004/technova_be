@@ -177,7 +177,7 @@ public class UserService {
         if (request.getPhoneNumber() != null) {
             String nextPhone = request.getPhoneNumber();
             if (!nextPhone.equals(user.getPhoneNumber()) && userRepository.existsByPhoneNumber(nextPhone)) {
-                throw new BadRequestException("Phone number already exists");
+                throw new BadRequestException("Số điện thoại đã tồn tại");
             }
             user.setPhoneNumber(nextPhone);
         }

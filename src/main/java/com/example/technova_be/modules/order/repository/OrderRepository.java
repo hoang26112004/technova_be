@@ -3,6 +3,7 @@ package com.example.technova_be.modules.order.repository;
 import com.example.technova_be.modules.order.dto.ProductCountProjection;
 import com.example.technova_be.modules.order.dto.OrderSalesPointProjection;
 import com.example.technova_be.comom.constants.OrderStatus;
+import com.example.technova_be.modules.dashboard.dto.CategorySalesProjection;
 import com.example.technova_be.modules.order.entity.Order;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,6 +29,24 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
         "AND o.createdDate < :endExclusive"
     )
     List<OrderSalesPointProjection> findSalesPoints(
+        @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+        @org.springframework.data.repository.query.Param("endExclusive") LocalDateTime endExclusive,
+        @org.springframework.data.repository.query.Param("excludedStatus") OrderStatus excludedStatus
+    );
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT c.name as name, SUM(oi.price * oi.quantity) as sales " +
+        "FROM Order o JOIN o.orderItems oi " +
+        "JOIN ProductVariant pv ON oi.variantId = pv.id " +
+        "JOIN pv.product p " +
+        "JOIN p.category c " +
+        "WHERE o.status <> :excludedStatus " +
+        "AND o.createdDate >= :start " +
+        "AND o.createdDate < :endExclusive " +
+        "GROUP BY c.name " +
+        "ORDER BY SUM(oi.price * oi.quantity) DESC"
+    )
+    List<CategorySalesProjection> findSalesByCategory(
         @org.springframework.data.repository.query.Param("start") LocalDateTime start,
         @org.springframework.data.repository.query.Param("endExclusive") LocalDateTime endExclusive,
         @org.springframework.data.repository.query.Param("excludedStatus") OrderStatus excludedStatus

@@ -25,7 +25,10 @@ import com.example.technova_be.modules.product.repository.ProductRepository;
 import com.example.technova_be.modules.product.repository.ProductVariantRepository;
 import com.example.technova_be.modules.product.service.ProductVariantService;
 import com.example.technova_be.modules.product.util.GeneratorUtil;
+import com.example.technova_be.modules.user.dto.AddressResponse;
+import com.example.technova_be.modules.user.entity.Address;
 import com.example.technova_be.modules.user.entity.User;
+import com.example.technova_be.modules.user.repository.AddressRepository;
 import com.example.technova_be.modules.user.repository.UserRepository;
 import com.example.technova_be.modules.notification.service.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
@@ -59,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
     ProductRepository productRepository;
     ProductVariantRepository variantRepository;
     UserRepository userRepository;
+    AddressRepository addressRepository;
     NotificationService notificationService;
 
     @Override
@@ -162,12 +166,24 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         notificationService.sendNotification(
                 savedOrder.getUserId(),
-                "Order status updated",
-                "Order " + savedOrder.getReference() + " is now " + savedOrder.getStatus() + ".",
+                "Cập nhật trạng thái đơn hàng",
+                "Đơn hàng " + savedOrder.getReference() + " hiện đang ở trạng thái " + toOrderStatusLabelVi(savedOrder.getStatus()) + ".",
                 NotificationType.ORDER,
                 savedOrder.getId().toString()
         );
         return new GlobalResponse<>(Status.SUCCESS, mapToOrderResponse(savedOrder, null));
+    }
+
+    private static String toOrderStatusLabelVi(OrderStatus status) {
+        if (status == null) return "Không xác định";
+        return switch (status) {
+            case PENDING -> "Chờ xử lý";
+            case CONFIRMED -> "Đã xác nhận";
+            case PAID -> "Đã thanh toán";
+            case SHIPPED -> "Đang giao hàng";
+            case DELIVERED -> "Đã giao hàng";
+            case CANCELLED -> "Đã hủy";
+        };
     }
 
     @Override
@@ -205,7 +221,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public GlobalResponse<String> confirmationOrder(Map<String, String> requestParams) {
-        return new GlobalResponse<>(Status.SUCCESS, "Xac nhan thanh toan thanh cong");
+        return new GlobalResponse<>(Status.SUCCESS, "Xác nhận thanh toán thành công");
     }
 
     @Override
@@ -215,7 +231,7 @@ public class OrderServiceImpl implements OrderService {
         CartResponse cart = cartApiResponse.data();
 
         if (cart == null || cart.items().isEmpty()) {
-            throw new RuntimeException("Gio hang dang trong, khong the checkout");
+            throw new RuntimeException("Giỏ hàng đang trống, không thể checkout");
         }
 
         Order order = Order.builder()
@@ -236,7 +252,7 @@ public class OrderServiceImpl implements OrderService {
 
         for (CartItemResponse cartItem : cart.items()) {
             ProductVariant variant = variantRepository.findById(cartItem.variantId())
-                    .orElseThrow(() -> new NotFoundException("San pham khong ton tai: " + cartItem.variantId()));
+                    .orElseThrow(() -> new NotFoundException("Sản phẩm không tồn tại: " + cartItem.variantId()));
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -267,21 +283,70 @@ public class OrderServiceImpl implements OrderService {
                 .reference(order.getReference())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
+                .shippingFee(order.getShippingFee())
+                .addressId(order.getAddressId())
                 .build();
     }
 
     private OrderResponse mapToOrderResponse(Order order, PaymentResponse payment) {
-        return new OrderResponse(
-                order.getId(),
-                order.getReference(),
-                order.getStatus(),
-                order.getPaymentMethod(),
-                order.getTotalAmount(),
-                order.getOrderItems().stream()
+        AddressResponse shippingAddress = null;
+        Integer addressId = order.getAddressId();
+        if (addressId != null) {
+            shippingAddress = addressRepository.findById(addressId.longValue())
+                    .map(this::toAddressResponse)
+                    .orElse(null);
+        }
+
+        String recipientName = null;
+        String recipientPhone = null;
+        try {
+            User u = userRepository.findById(order.getUserId()).orElse(null);
+            if (u != null) {
+                recipientName = (u.getFullName() != null && !u.getFullName().isBlank())
+                        ? u.getFullName()
+                        : u.getUsername();
+                recipientPhone = (u.getPhoneNumber() != null && !u.getPhoneNumber().isBlank())
+                        ? u.getPhoneNumber()
+                        : null;
+            }
+        } catch (Exception ignored) {
+            // Best-effort only; do not fail order retrieval if user record is missing.
+        }
+        if (shippingAddress != null && shippingAddress.getPhoneNumber() != null && !shippingAddress.getPhoneNumber().isBlank()) {
+            recipientPhone = shippingAddress.getPhoneNumber();
+        }
+
+        return OrderResponse.builder()
+                .id(order.getId())
+                .reference(order.getReference())
+                .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod())
+                .totalAmount(order.getTotalAmount())
+                .shippingFee(order.getShippingFee())
+                .addressId(order.getAddressId())
+                .shippingAddress(shippingAddress)
+                .recipientName(recipientName)
+                .recipientPhone(recipientPhone)
+                .items(order.getOrderItems().stream()
                         .map(i -> new OrderItemResponse(i.getProductId(), i.getVariantId(), i.getQuantity(), i.getPrice()))
-                        .toList(),
-                payment,
-                order.getCreatedDate()
+                        .toList())
+                .paymentDetails(payment)
+                .createdDate(order.getCreatedDate())
+                .build();
+    }
+
+    private AddressResponse toAddressResponse(Address address) {
+        if (address == null) return null;
+        return new AddressResponse(
+                address.getId(),
+                address.getPhoneNumber(),
+                address.getStreet(),
+                address.getCity(),
+                address.getState(),
+                address.getCountry(),
+                address.getZipCode(),
+                address.getDescription(),
+                Boolean.TRUE.equals(address.getIsDefault())
         );
     }
 

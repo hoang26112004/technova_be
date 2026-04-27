@@ -5,6 +5,7 @@ import java.util.List;
 public record DashboardOverviewResponse(
         DashboardKpisResponse kpis,
         List<MonthlySalesResponse> monthlySales,
-        List<CategoryCountResponse> categoryDistribution
+        List<CategoryCountResponse> categoryDistribution,
+        List<WeeklySalesResponse> weeklySales,
+        List<CategorySalesResponse> salesByCategory
 ) {}
-

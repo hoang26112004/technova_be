@@ -2,6 +2,7 @@ package com.example.technova_be.modules.order.dto;
 
 import com.example.technova_be.comom.constants.OrderStatus;
 import com.example.technova_be.comom.constants.PaymentMethod;
+import com.example.technova_be.modules.user.dto.AddressResponse;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,11 @@ public class OrderResponse { // Chuyển thành CLASS
     OrderStatus status;
     PaymentMethod paymentMethod;
     Double totalAmount;
+    Double shippingFee;
+    Integer addressId;
+    AddressResponse shippingAddress;
+    String recipientName;
+    String recipientPhone;
     List<OrderItemResponse> items;
     Object paymentDetails;
     LocalDateTime createdDate;
