@@ -149,20 +149,26 @@ erDiagram
   USERS ||--o{ ADDRESSES : has
   USERS ||--o{ USER_ROLES : has
   ROLES ||--o{ USER_ROLES : has
+  USERS ||--o{ REFRESH_TOKENS : has
+  USERS ||--o{ NOTIFICATIONS : receives
+  USERS ||--o{ ORDERS : places
+  USERS ||--o{ REVIEWS : writes
 
   CATEGORIES ||--o{ PRODUCTS : contains
   PRODUCTS ||--o{ VARIANTS : has
   VARIANTS ||--o{ PRODUCT_ATTRIBUTES : has
   PRODUCTS ||--o{ PRODUCT_IMAGES : has
+  PRODUCTS ||--o{ REVIEWS : has
 
   USERS ||--o| CARTS : owns
   CARTS ||--o{ CART_ITEMS : has
   VARIANTS ||--o{ CART_ITEMS : in
 
   ORDERS ||--o{ ORDER_ITEMS : has
+  VARIANTS ||--o{ ORDER_ITEMS : ordered_as
+  ADDRESSES ||--o{ ORDERS : shipping_address
 ```
 
 Notes:
-1. Các quan hệ bằng `*_id` nhưng trong code đang để kiểu scalar (vd `orders.userId`, `orders.addressId`, `reviews.userId/productId`, `order_items.variantId/productId`, `notifications.userId`, `refresh_tokens.userId`) được thể hiện như “logical FK” trong ERD. Nếu DB có FK constraints thật, mình có thể cập nhật cho chuẩn 100% bằng cách lấy schema trực tiếp từ DB.
+1. Các quan hệ bằng `*_id` nhưng trong code đang để kiểu scalar (vd `orders.userId`, `orders.addressId`, `reviews.userId/productId`, `order_items.variantId/productId`, `notifications.userId`, `refresh_tokens.userId`) được thể hiện như “logical FK” trong ERD (vẽ theo ý nghĩa dữ liệu). Nó không đảm bảo DB đang có FK constraint thật.
 2. `CartItem` đang dùng `@JoinColumn(name = "cart_id")` trỏ sang `Cart` có PK field là `userId`. Với naming strategy mặc định của Spring (camelCase -> snake_case), cột PK của `carts` thường là `user_id`, nên bạn có thể muốn đổi join column sang `user_id` (hoặc đặt `@Column(name = "cart_id")` cho `Cart.userId`) để tránh lệch tên cột.
-
